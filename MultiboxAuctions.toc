@@ -1,0 +1,10 @@
+## Interface: 80100
+## Title: MultiboxAuctions
+## SavedVariables: MultiboxAuctionsDB
+
+Libs\LibStub\LibStub.lua
+Libs\StdUi\StdUi.xml
+
+sellers.lua
+MultiboxAuctions.lua
+
