@@ -7,7 +7,7 @@ StdUi = LibStub('StdUi')
 local realmName, charName, realmData
 local MAuc = {} -- addon Object (needed to keep functions local)
 local window = {}
-local itemsTable = {}
+local itemsTable, cancelTable = {}, {}
 local herbsTable = {152510,152509,152505,152507,152508,152511,152506}
 local alchTable = {152639,152638,152641,163222,163223,163224}
 local defaultStackCount = {
@@ -64,10 +64,18 @@ function MAuc:DrawWindow()
 	window:SetPoint('TOPLEFT',UIParent,'CENTER',-240,46)
 	window:SetFrameStrata("MEDIUM")
 
+	-- Clear Prices Button
 	window.clearAll = StdUi:Button(window,120,20,'Clear Sell Prices')
 	window.clearAll:SetPoint("TOPLEFT",window,"TOPLEFT",6,-6)
 	window.clearAll:SetScript("OnClick",function()
 		MAuc:ClearAllButton()
+	end)
+
+	-- Cancel Auctions Button
+	window.cancelAuctions = StdUi:Button(window,120,20,'Cancel Auctions')
+	window.cancelAuctions:SetPoint("LEFT", window.clearAll, "RIGHT", 5, 0)
+	window.cancelAuctions:SetScript("OnClick", function()
+		MAuc:CancelAuctions()
 	end)
 
 	window.items = window.items or {}
@@ -175,6 +183,34 @@ function MAuc:ClearAllButton()
 		window.items[i].editBox:SetText('')
 		realmData[itemID]['postPrice'] = nil
 	end
+end
+
+-- TODO: cancel based on a hash table of itemids
+function MAuc:CancelAuctions()
+	-- if we already have a cancel table just cancel the highest index auction
+	if #cancelTable > 0 then
+			CancelAuction(cancelTable[1])
+			table.remove(cancelTable, 1)
+		return
+	end
+	
+	-- Populate cancelTable
+	cancelTable = {}
+	local numAuctions = GetNumAuctionItems("owner")
+	
+	-- find all auctions to cancel
+	for i = 1, numAuctions do
+		local _,_,itemCount,_,_,_,_,_,_,buyoutPrice,_,_,_,_,_,_, itemID,_ =  
+			GetAuctionItemInfo("owner", i)
+		--local timeLeft = GetAuctionItemTimeLeft("owner", i)
+		if itemID == 152511 then
+			table.insert(cancelTable, i)
+		end
+	end
+
+	-- sort the cancelTable so when we cancel indices dont change because
+	-- we cancel from highest to lowest index
+	table.sort(cancelTable, function(a, b) return a > b end)
 end
 
 function MAuc:UpdateAuctionData()
@@ -345,7 +381,6 @@ function MAuc:maxStacks(itemID,stackSize)
 	return math.floor(qty/stackSize)
 end
 
-
 -------------------------------------------------------------------------------
 
 -- Call functions in the events table for events
@@ -371,3 +406,22 @@ end
 
 -- Throttle checking for new scan data
 local _ = C_Timer.NewTicker(2, function() NewScanData() end, nil)
+
+-------------------------------------------------------------------------------
+
+-- Slash Command List
+SLASH_MultiboxAuctions1 = '/mauctions'
+SLASH_MultiboxAuctions2 = '/mauc'
+SlashCmdList['MultiboxAuctions'] = function(argString) MAuc:SlashCommand(argString) end
+
+function MAuc:SlashCommand(argString)
+	local args = {strsplit(" ",argString)}
+	local cmd = table.remove(args, 1)
+
+	if cmd == 'cancel' then
+		MAuc:CancelAuctions()
+	else
+		print('MultiboxAuctions:')
+		print('  /mauc cancel')
+	end
+end
