@@ -45,9 +45,9 @@ function MAuc:Init()
 	local herbSeller = addon.sellerDb['herbs'][realmName]
 	local alchSeller = addon.sellerDb['alchemy'][realmName]
 
-	if string.find(herbSeller, charName) then
+	if herbSeller and string.find(herbSeller, charName) then
 		itemsTable = herbsTable
-	elseif string.find(alchSeller, charName) then
+	elseif alchSeller and string.find(alchSeller, charName) then
 		itemsTable = alchTable
 	else
 		return
@@ -190,6 +190,7 @@ function MAuc:CancelAuctions()
 	-- if we already have a cancel table just cancel the highest index auction
 	if #cancelTable > 0 then
 			CancelAuction(cancelTable[1])
+			print(GetNumAuctionItems("owner"))
 			table.remove(cancelTable, 1)
 		return
 	end
@@ -203,7 +204,7 @@ function MAuc:CancelAuctions()
 		local _,_,itemCount,_,_,_,_,_,_,buyoutPrice,_,_,_,_,_,_, itemID,_ =  
 			GetAuctionItemInfo("owner", i)
 		--local timeLeft = GetAuctionItemTimeLeft("owner", i)
-		if itemID == 152511 then
+		if itemID == 2589 or itemID == 2592 then
 			table.insert(cancelTable, i)
 		end
 	end
