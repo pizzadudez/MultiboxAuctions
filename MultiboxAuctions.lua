@@ -6,8 +6,8 @@ StdUi = LibStub('StdUi')
 -- Locals
 local realmName, charName, realmData
 local MAuc = {} -- addon Object (needed to keep functions local)
-local window = {}
-local itemsTable, cancelTable = {}, {}
+local window, cancelFrame = {}, {} 
+local itemsTable, cancelTable, cancelItems = {}, {}, {}
 local herbsTable = {152510,152509,152505,152507,152508,152511,152506}
 local alchTable = {152639,152638,152641,163222,163223,163224}
 local defaultStackCount = {
@@ -37,6 +37,14 @@ function events:PLAYER_LOGIN()
     MAuc:Init()
 end
 
+function events:AUCTION_HOUSE_SHOW()
+	cancelFrame:Show()
+end
+
+function events:AUCTION_HOUSE_CLOSED()
+	cancelFrame:Hide()
+end
+
 -------------------------------------------------------------------------------
 
 function MAuc:Init()
@@ -52,11 +60,13 @@ function MAuc:Init()
 	else
 		return
 	end
-	itemsTable = herbsTable
+
+	--itemsTable = herbsTable
 	realmData = MultiboxAuctionsDB[realmName] or {}
 	MultiboxAuctionsDB[realmName] = realmData
 
 	MAuc:DrawWindow()
+	MAuc:DrawCancelFrame()
 end
 
 function MAuc:DrawWindow()
@@ -75,7 +85,7 @@ function MAuc:DrawWindow()
 	window.cancelAuctions = StdUi:Button(window,120,20,'Cancel Auctions')
 	window.cancelAuctions:SetPoint("LEFT", window.clearAll, "RIGHT", 5, 0)
 	window.cancelAuctions:SetScript("OnClick", function()
-		MAuc:CancelAuctions()
+		--print(cancelItems[152510])
 	end)
 
 	window.items = window.items or {}
@@ -185,12 +195,37 @@ function MAuc:ClearAllButton()
 	end
 end
 
+function MAuc:DrawCancelFrame()
+	cancelFrame = StdUi:Window(UIParent, "Cancel Auctions", 60, 200)
+	cancelFrame:SetPoint('TOPLEFT', UIParent, 'TOPLEFT', 362, -100)
+	cancelFrame:SetFrameStrata("MEDIUM")
+
+	cancelFrame.items = cancelFrame.items or {}
+	cancelFrame.items[0] = cancelFrame
+	for i, itemID in ipairs(itemsTable) do
+		cancelItems[itemID] = false
+
+		local item = StdUi:Checkbox(cancelFrame, 24, 24)
+		item:SetPoint('TOP', cancelFrame.items[i-1], 'BOTTOM', 0, -4)
+		item.OnValueChanged = function(self, state, value)
+			cancelItems[itemID] = item.isChecked
+		end
+		cancelFrame.items[i] = item
+
+		local textureID = GetItemTextureID(itemID)
+		item.texture = StdUi:Texture(item, 24, 24, textureID)
+		item.texture:SetPoint("LEFT", item, "RIGHT", 0, 0)
+	end
+	cancelFrame.items[1]:SetPoint('TOPLEFT', cancelFrame, 'TOPLEFT', 3, -20)
+	cancelFrame:Hide()
+end
+
 -- TODO: cancel based on a hash table of itemids
 function MAuc:CancelAuctions()
 	-- if we already have a cancel table just cancel the highest index auction
 	if #cancelTable > 0 then
 			CancelAuction(cancelTable[1])
-			print(GetNumAuctionItems("owner"))
+			print(cancelTable[1])
 			table.remove(cancelTable, 1)
 		return
 	end
@@ -204,7 +239,7 @@ function MAuc:CancelAuctions()
 		local _,_,itemCount,_,_,_,_,_,_,buyoutPrice,_,_,_,_,_,_, itemID,_ =  
 			GetAuctionItemInfo("owner", i)
 		--local timeLeft = GetAuctionItemTimeLeft("owner", i)
-		if itemID == 2589 or itemID == 2592 then
+		if cancelItems[itemID] then
 			table.insert(cancelTable, i)
 		end
 	end
