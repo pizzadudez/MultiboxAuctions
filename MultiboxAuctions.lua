@@ -45,6 +45,12 @@ function events:AUCTION_HOUSE_CLOSED()
 	cancelFrame:Hide()
 end
 
+function events:CHAT_MSG_ADDON(prefix, message, channel, name)
+	if prefix == 'Multiboxer' then 
+		MAuc:UpdateAuctionData()
+	end
+end
+
 -------------------------------------------------------------------------------
 
 function MAuc:Init()
@@ -61,9 +67,11 @@ function MAuc:Init()
 		return
 	end
 
-	--itemsTable = herbsTable
-	realmData = MultiboxAuctionsDB[realmName] or {}
-	MultiboxAuctionsDB[realmName] = realmData
+	realmData = MultiboxerDB['scanData'][realmName] or {}
+	MultiboxerDB['scanData'][realmName] = realmData
+
+	-- receive messages from Multiboxer addon
+	C_ChatInfo.RegisterAddonMessagePrefix('Multiboxer')
 
 	MAuc:DrawWindow()
 	MAuc:DrawCancelFrame()
@@ -148,9 +156,11 @@ function MAuc:DrawItemFrame(parent,itemID)
 
 	for i, scanObj in ipairs(scanData) do
 		local price = math.floor(scanData[i]['price'] * 10000) / 10000
-		local size = scanData[i]['size']
+		local size = scanData[i]['stackSize']
 		local qty = scanData[i]['qty']
-		parent.slides[i] = MAuc:DrawAuctionSlide(parent,price,qty,size,itemID)
+		local timeLeft = scanData[i]['timeLeft']
+		local owner = scanData[i]['owner']
+		parent.slides[i] = MAuc:DrawAuctionSlide(parent,price,qty,size,itemID,timeLeft,owner)
 		parent.slides[i]:SetPoint('TOP',parent.slides[i-1],'BOTTOM',0,0)
 	end
 	-- in case there is no slide
@@ -159,10 +169,12 @@ function MAuc:DrawItemFrame(parent,itemID)
 	end
 end
 
-function MAuc:DrawAuctionSlide(parent,price,qty,size,itemID)
+function MAuc:DrawAuctionSlide(parent,price,qty,size,itemID,timeLeft,owner)
 	local displayPrice = math.floor(price*100)/100
 	local slide = StdUi:HighlightButton(parent,70,16,displayPrice)
 	slide.price = price
+	slide.timeLeft = timeLeft
+	slide.owner = owner
 
 	slide:SetScript('OnClick',function()
 		parent.editBox:SetValue(slide.price - 0.0101)
@@ -191,7 +203,9 @@ end
 function MAuc:ClearAllButton()
 	for i,itemID in ipairs(itemsTable) do
 		window.items[i].editBox:SetText('')
-		realmData[itemID]['postPrice'] = nil
+		if realmData[itemID] then
+			realmData[itemID]['postPrice'] = nil
+		end
 	end
 end
 
@@ -251,29 +265,36 @@ end
 
 function MAuc:UpdateAuctionData()
 	for i, itemID in ipairs(itemsTable) do
-		if realmData[itemID] then
+		local item = window.items[i]
+		item.slides[0] = item
+		if realmData[itemID] and realmData[itemID]['scanData'] then
 			local scanData = realmData[itemID]['scanData']
-			local item = window.items[i]
+			
 
 			-- modify old slides or create new ones if needed
 			local count = 0
 			for j, scanObj in ipairs(scanData) do
 				local price = math.floor(scanData[j]['price'] * 10000) / 10000
-				local displayPrice = math.floor(price*100)/100
-				local size = scanData[j]['size']
+				local displayPrice = math.floor(price*100)/100 
+				local size = scanData[j]['stackSize']
 				local qty = scanData[j]['qty']
+				local timeLeft = scanData[j]['timeLeft']
+				local owner = scanData[j]['owner']
 				count = count + 1
 
 				local slide = item.slides[j]
 
-				if slide then
+				if slide then		
 					slide.text:SetText(displayPrice)
 					slide.price = price
 					slide.qty:SetText(qty)
+					slide:Show()
 					MAuc:SetColorBySize(slide.qty,size)
+					slide.owner = owner
+					slide.timeLeft = timeLeft
 					MAuc:IsOwnAuction(slide,itemID)
 				else
-					item.slides[j] = MAuc:DrawAuctionSlide(window.items[i],price,qty,size,itemID)
+					item.slides[j] = MAuc:DrawAuctionSlide(window.items[i],price,qty,size,itemID,timeLeft,owner)
 					item.slides[j]:SetPoint('TOP',item.slides[j-1],'BOTTOM',0,0)
 				end
 			end
@@ -281,6 +302,7 @@ function MAuc:UpdateAuctionData()
 			-- hide excess slides
 			while item.slides[count+1] do
 				item.slides[count+1]:Hide()
+				item.slides[count+1].text:SetTextColor(1,1,1,1) -- set color to default
 				count = count + 1
 			end
 
@@ -288,7 +310,9 @@ function MAuc:UpdateAuctionData()
 			MAuc:DrawScanTime(item,itemID)
 
 			-- in case no slides have been drawn before, attach slides[1] to it's parent
-			item.slides[1]:SetPoint('TOP',item,'TOP',5,0)
+			if item.slides[1] then
+				item.slides[1]:SetPoint('TOP',item.slides[0],'TOP',5,0)
+			end
 		end
 	end
 end
@@ -312,19 +336,12 @@ function MAuc:SetColorBySize(frame, size)
 end
 
 function MAuc:IsOwnAuction(slide, itemID)
-	local postPrice
-	if MCSV[realmName] then
-		if MCSV[realmName][charName] then
-			if MCSV[realmName][charName]['postPrices'] then
-				postPrice = MCSV[realmName][charName]['postPrices'][itemID]
-			end
-		end
-	end
+	slide.text:SetTextColor(1,1,1,1)
 
-	if postPrice and postPrice == slide.price * 10000 then
+	if slide.owner == charName then
 		slide.text:SetTextColor(0.37,1,0.97,1)
-	else
-		slide.text:SetTextColor(1,1,1,1)
+	elseif slide.timeLeft < 3 then
+		slide.text:SetTextColor(0.6, 0.6, 0.6)
 	end
 end
 
@@ -428,20 +445,6 @@ end)
 for k, v in pairs(events) do
     frame:RegisterEvent(k)
 end
-
--------------------------------------------------------------------------------
-
--- Checks if there's any new scan data
-function NewScanData()
-	if AUCTIONATOR_SAVEDVARS['JustScanned'] == true then
-		print("update")
-		AUCTIONATOR_SAVEDVARS['JustScanned'] = false
-		MAuc:UpdateAuctionData()
-	end
-end
-
--- Throttle checking for new scan data
-local _ = C_Timer.NewTicker(2, function() NewScanData() end, nil)
 
 -------------------------------------------------------------------------------
 
