@@ -189,14 +189,27 @@ function MAuc:DrawAuctionSlide(parent,price,qty,size,itemID,timeLeft,owner)
 end
 
 function MAuc:DrawScanTime(parent,itemID)
-	local day,month,_,hour,minute,_ = MAuc:DateFromString(realmData[itemID]['scanTime'])
-	local scanTime = day..'/'..month..' '..hour..':'..minute
-	
+	local timestamp = realmData[itemID]['scanTime']
+	local scanTime = date("%d/%m %H:%M", timestamp)
+
+	-- create/update scanTime
 	if parent.time == nil then
 		parent.time = StdUi:FontString(parent,scanTime)
 		parent.time:SetPoint("BOTTOM",parent,"TOP",-7,54)
 	else 
 		parent.time:SetText(scanTime)
+	end
+
+	-- color time different based on freshness
+	if time() - timestamp > 3600 then
+		local r, g, b = MAuc:RGBToPercent(229, 73, 73)
+		parent.time:SetTextColor(r, g, b, 1)
+	elseif time() - timestamp > 1800 then
+		local r, g, b = MAuc:RGBToPercent(255, 176, 86)
+		parent.time:SetTextColor(r, g, b, 1)
+	else
+		local r, g, b = MAuc:RGBToPercent(86, 255, 120)
+		parent.time:SetTextColor(r, g, b, 1)
 	end
 end
 
@@ -317,12 +330,6 @@ function MAuc:UpdateAuctionData()
 	end
 end
 
-function MAuc:DateFromString(string)
-	local pattern = '(%d+)/(%d+)/(%d+) (%d+):(%d+):(%d+)'
-	local day,month,year,hour,minute,second = string:match(pattern)
-	return day,month,year,hour,minute,second
-end
-
 function MAuc:SetColorBySize(frame, size)
 	if size == 100 or size == 10 then
 		r,g,b = 1,0.5,0.5
@@ -333,6 +340,10 @@ function MAuc:SetColorBySize(frame, size)
 	end
 
 	frame:SetTextColor(r,g,b,1)
+end
+
+function MAuc:RGBToPercent(r,g,b)
+	return r / 255, g / 255, b / 255
 end
 
 function MAuc:IsOwnAuction(slide, itemID)
