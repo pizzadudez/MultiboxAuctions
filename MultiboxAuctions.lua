@@ -70,11 +70,22 @@ function MAuc:Init()
 	realmData = MultiboxerDB['scanData'][realmName] or {}
 	MultiboxerDB['scanData'][realmName] = realmData
 
+	MAuc:CheckGlobalData()
+
 	-- receive messages from Multiboxer addon
 	C_ChatInfo.RegisterAddonMessagePrefix('Multiboxer')
 
 	MAuc:DrawWindow()
 	MAuc:DrawCancelFrame()
+end
+
+function MAuc:CheckGlobalData()
+	local realmDataGlobal = addon.realmDataGlobal[realmName]
+	for itemID, _ in pairs(realmDataGlobal) do
+		if realmDataGlobal[itemID]['scanTime'] > realmData[itemID]['scanTime'] then
+			realmData[itemID] = realmDataGlobal[itemID]
+		end
+	end
 end
 
 function MAuc:DrawWindow()

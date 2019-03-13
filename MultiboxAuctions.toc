@@ -9,3 +9,5 @@ Libs\StdUi\StdUi.xml
 sellers.lua
 MultiboxAuctions.lua
 
+scanData.lua
+
