@@ -80,6 +80,15 @@ function MAuc:Init()
 end
 
 function MAuc:CheckGlobalData()
+	-- no data so return
+	if not addon.realmDataGlobal[realmName] then
+		return
+	end
+	-- no data so return
+	if not realmData[itemID] then
+		return
+	end
+
 	local realmDataGlobal = addon.realmDataGlobal[realmName]
 	for itemID, _ in pairs(realmDataGlobal) do
 		if realmDataGlobal[itemID]['scanTime'] > realmData[itemID]['scanTime'] then
@@ -130,7 +139,7 @@ function MAuc:DrawWindow()
 		-- Sell NumStacks
 		item.sellEditBox = StdUi:EditBox(item,24,20,defaultStackCount[itemID])
 		item.sellEditBox:SetPoint('RIGHT',item.sellButton,'LEFT',-2,0)
-		item.sellEditBox:SetValue(defaultStackCount[itemID])
+		item.sellEditBox:SetValue(defaultStackCount[itemID] or 0)
 		item.sellEditBox.OnValueChanged = function(self)
 			self:ClearFocus()
 		end
