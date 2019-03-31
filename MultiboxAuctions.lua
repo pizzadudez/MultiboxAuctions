@@ -386,7 +386,7 @@ function MAuc:SellItem(item, itemID)
 	if realmData[itemID] then
 		price = realmData[itemID]['postPrice']
 		if price then
-			price = price * 10000 -- posting price is in coppers
+			price = math.floor(price * 10000 + 0.5) -- posting price is in coppers
 		elseif not stackCount then
 			print('MultiboxAuctions: No stackCount selected')
 			return
