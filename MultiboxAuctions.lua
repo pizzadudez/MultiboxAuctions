@@ -18,6 +18,30 @@ local defaultStackCount = {
 	[152508] = 24,
 	[152511] = 12,
 	[152506] = 12,
+
+	[152639] = 15,
+	[152638] = 15,
+	[152641] = 15,
+	[163222] = 15,
+	[163223] = 15,
+	[163224] = 15
+}
+
+local defaultStackSize = {
+	[152510] = 200,
+	[152509] = 200,
+	[152505] = 200,
+	[152507] = 200,
+	[152508] = 200,
+	[152511] = 200,
+	[152506] = 200,
+
+	[152639] = 20,
+	[152638] = 20,
+	[152641] = 20,
+	[163222] = 20,
+	[163223] = 20,
+	[163224] = 20
 }
 
 local defaultDB = {}
@@ -380,7 +404,7 @@ end
 function MAuc:SellItem(item, itemID)
 	local price = nil
 	local time = 3 -- Probably always gonna be 48h
-	local stackSize = 200 -- gonna have different buttons for this
+	local stackSize = defaultStackSize[itemID] -- gonna have different buttons for this
 	local stackCount = tonumber(item.sellEditBox:GetValue())
 
 	if realmData[itemID] then
