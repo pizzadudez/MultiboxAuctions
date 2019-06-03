@@ -393,7 +393,7 @@ end
 function MAuc:IsOwnAuction(slide, itemID)
 	slide.text:SetTextColor(1,1,1,1)
 
-	if slide.owner == charName then
+	if string.find(slide.owner, charName) then
 		slide.text:SetTextColor(0.37,1,0.97,1)
 	elseif slide.timeLeft < 3 then
 		slide.text:SetTextColor(0.6, 0.6, 0.6)
