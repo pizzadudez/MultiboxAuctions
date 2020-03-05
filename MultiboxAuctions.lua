@@ -8,9 +8,12 @@ local realmName, charName, realmData
 local MAuc = {} -- addon Object (needed to keep functions local)
 local window, cancelFrame = {}, {} 
 local itemsTable, cancelTable, cancelItems = {}, {}, {}
-local herbsTable = {152510,152509,152505,152507,152508,152511,152506}
+-- local herbsTable = {168487,168185,   152510,152509,152505,152507,152508,152511,152506}
+local herbsTable = {168487,152505,152510}
 local alchTable = {152639,152638,152641,163222,163223,163224}
 local defaultStackCount = {
+	[168487] = 36,
+	[168185] = 24,
 	[152510] = 5,
 	[152509] = 36,
 	[152505] = 36,
@@ -28,6 +31,8 @@ local defaultStackCount = {
 }
 
 local defaultStackSize = {
+	[168487] = 200,
+	[168185] = 200,
 	[152510] = 200,
 	[152509] = 200,
 	[152505] = 200,
@@ -78,28 +83,28 @@ end
 -------------------------------------------------------------------------------
 
 function MAuc:Init()
-	realmName = GetRealmName()
-	charName = UnitName("player")
-	local herbSeller = addon.sellerDb['herbs'][realmName]
-	local alchSeller = addon.sellerDb['alchemy'][realmName]
+	-- realmName = GetRealmName()
+	-- charName = UnitName("player")
+	-- local herbSeller = addon.sellerDb['herbs'][realmName]
+	-- local alchSeller = addon.sellerDb['alchemy'][realmName]
 
-	if herbSeller and string.find(herbSeller, charName) then
+	-- if herbSeller and string.find(herbSeller, charName) then
 		itemsTable = herbsTable
-	elseif alchSeller and string.find(alchSeller, charName) then
-		itemsTable = alchTable
-	else
-		return
-	end
+	-- elseif alchSeller and string.find(alchSeller, charName) then
+	-- 	itemsTable = alchTable
+	-- else
+	-- 	return
+	-- end
 
-	realmData = MultiboxerDB['scanData'][realmName] or {}
-	MultiboxerDB['scanData'][realmName] = realmData
+	-- realmData = MultiboxerDB['scanData'][realmName] or {}
+	-- MultiboxerDB['scanData'][realmName] = realmData
 
-	MAuc:CheckGlobalData()
+	-- MAuc:CheckGlobalData()
 
-	-- receive messages from Multiboxer addon
-	C_ChatInfo.RegisterAddonMessagePrefix('Multiboxer')
+	-- -- receive messages from Multiboxer addon
+	-- C_ChatInfo.RegisterAddonMessagePrefix('Multiboxer')
 
-	MAuc:DrawWindow()
+	-- MAuc:DrawWindow()
 	MAuc:DrawCancelFrame()
 end
 
@@ -268,7 +273,7 @@ end
 
 function MAuc:DrawCancelFrame()
 	cancelFrame = StdUi:Window(UIParent, "Cancel Auctions", 60, 200)
-	cancelFrame:SetPoint('TOPLEFT', UIParent, 'TOPLEFT', 362, -100)
+	cancelFrame:SetPoint('CENTER', UIParent, 'CENTER', -84, 22)
 	cancelFrame:SetFrameStrata("MEDIUM")
 
 	cancelFrame.items = cancelFrame.items or {}
@@ -295,7 +300,7 @@ end
 function MAuc:CancelAuctions()
 	-- if we already have a cancel table just cancel the highest index auction
 	if #cancelTable > 0 then
-			CancelAuction(cancelTable[1])
+			C_AuctionHouse.CancelAuction(cancelTable[1])
 			print(cancelTable[1])
 			table.remove(cancelTable, 1)
 		return
@@ -303,15 +308,17 @@ function MAuc:CancelAuctions()
 	
 	-- Populate cancelTable
 	cancelTable = {}
-	local numAuctions = GetNumAuctionItems("owner")
+	local numAuctions = C_AuctionHouse.GetNumOwnedAuctions()
 	
 	-- find all auctions to cancel
 	for i = 1, numAuctions do
-		local _,_,itemCount,_,_,_,_,_,_,buyoutPrice,_,_,_,_,_,_, itemID,_ =  
-			GetAuctionItemInfo("owner", i)
+		-- local _,_,itemCount,_,_,_,_,_,_,buyoutPrice,_,_,_,_,_,_, itemID,_ =  
+		-- 	GetAuctionItemInfo("owner", i)
 		--local timeLeft = GetAuctionItemTimeLeft("owner", i)
+		local auc = C_AuctionHouse.GetOwnedAuctionInfo(i)
+		local itemID = auc.itemKey.itemID
 		if cancelItems[itemID] then
-			table.insert(cancelTable, i)
+			table.insert(cancelTable, auc.auctionID)
 		end
 	end
 
